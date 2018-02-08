@@ -11,61 +11,66 @@ lines = logToCheck.read().splitlines()
 #get the number of actions in the file
 length = len(lines)
 #initialise the action variables
-numPlace = 0
-numDig = 0
-numChat = 0
-numPunch = 0
+placeActions = []
+digActions = []
+chatActions = []
+punchActions = []
+junkActions = []
+craftActions = []
+storeActions = []
+writeActions = []
+useActions = []
+interactActions = []
+objInteractActions = []
+damagedActions = []
+#list for junk items (irrelevant data)
+junk = []
 numJunk = 0
-numCraft = 0
-numStore = 0
-numWrite = 0
-numUse = 0
-numInteract = 0
-numObjInteract = 0
-numDamaged = 0
 #check each line for actions and increment actions if matching
 i = 0
 while(i<length):
     stringToCheck = lines[i]
     if("digs" in stringToCheck):
-        numDig+=1
+        digActions.append(stringToCheck)
     elif("places" in stringToCheck):
-        numPlace+=1
+        placeActions.append(stringToCheck)
     elif("CHAT" in stringToCheck):
-        numChat+=1
+        chatActions.append(stringToCheck)
     elif("punches" in stringToCheck):
-        numPunch+=1
+        punchActions.append(stringToCheck)
     elif("crafts" in stringToCheck):
-        numCraft+=1
+        craftActions.append(stringToCheck)
     elif("moves" in stringToCheck):
-        numStore+=1
+        storeActions.append(stringToCheck)
     elif("takes" in stringToCheck):
-        numStore+=1
+        storeActions.append(stringToCheck)
     elif("right-clicks" in stringToCheck):
-        numInteract+=1
+        interactActions.append(stringToCheck)
     elif("activates" in stringToCheck):
-        numObjInteract+=1
+        objInteractActions.append(stringToCheck)
     elif("uses" in stringToCheck):
-        numUse+=1
+        useActions.append(stringToCheck)
     elif("wrote" in stringToCheck):
-        numWrite+=1
+        writeActions.append(stringToCheck)
     elif("punched by" in stringToCheck):
-        numDamaged+=1
+        punchActions.append(stringToCheck)
     else:
-        print(stringToCheck)
-        numJunk+=1
+        junk.append(stringToCheck)
     i+=1
+        
+finalLength = (length - len(junk))
 #find percentage values and print
-print("place actions: " + str(numPlace) + " (" + str(percent(numPlace,length)) + " percent)")
-print("dig actions: " + str(numDig)+ " (" + str(percent(numDig,length)) + " percent)")
-print("chat actions: " + str(numChat)+ " (" + str(percent(numChat,length)) + " percent)")
-print("punch actions: " + str(numPunch)+ " (" + str(percent(numPunch,length)) + " percent)")
-print("damaged by opponent: " + str(numDamaged)+ " (" + str(percent(numDamaged,length)) + " percent)")
-print("craft actions: " + str(numCraft)+ " (" + str(percent(numCraft,length)) + " percent)")
-print("storage actions: " + str(numStore)+ " (" + str(percent(numStore,length)) + " percent)")
-print("writing actions: " + str(numWrite)+ " (" + str(percent(numWrite,length)) + " percent)")
-print("player/npc interactions: " + str(numInteract)+ " (" + str(percent(numInteract,length)) + " percent)")
-print("object interactions: " + str(numObjInteract)+ " (" + str(percent(numObjInteract,length)) + " percent)")
-print("use actions: " + str(numUse)+ " (" + str(percent(numUse,length)) + " percent)")
-print("junk actions (discard): " + str(numJunk)+ " (" + str(percent(numJunk,length)) + " percent)")
+print("place actions: " + str(len(placeActions)) + " (" + str(percent(len(placeActions),finalLength)) + " percent)")
+print("dig actions: " + str(len(digActions))+ " (" + str(percent(len(digActions),finalLength)) + " percent)")
+print("chat actions: " + str(len(chatActions))+ " (" + str(percent(len(chatActions),finalLength)) + " percent)")
+print("punch actions: " + str(len(punchActions))+ " (" + str(percent(len(punchActions),finalLength)) + " percent)")
+print("damaged by opponent: " + str(len(damagedActions))+ " (" + str(percent(len(damagedActions),finalLength)) + " percent)")
+print("craft actions: " + str(len(craftActions))+ " (" + str(percent(len(craftActions),finalLength)) + " percent)")
+print("storage actions: " + str(len(storeActions))+ " (" + str(percent(len(storeActions),finalLength)) + " percent)")
+print("writing actions: " + str(len(writeActions))+ " (" + str(percent(len(writeActions),finalLength)) + " percent)")
+print("player/npc interactions: " + str(len(interactActions))+ " (" + str(percent(len(interactActions),finalLength)) + " percent)")
+print("object interactions: " + str(len(objInteractActions))+ " (" + str(percent(len(objInteractActions),finalLength)) + " percent)")
+print("use actions: " + str(len(useActions))+ " (" + str(percent(len(useActions),finalLength)) + " percent)")
+print("junk actions (discarded): " + str(len(junk)))
+print("number of lines: " + str(length))
 input()
