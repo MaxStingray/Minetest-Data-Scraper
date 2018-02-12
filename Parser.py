@@ -11,25 +11,19 @@ length = len(lines)
 #iterate over each line of the collection
 i = 0
 uniqueNameList = []
+junkWords = ['|', 'protect', 'Announcing', 'CHAT', 'facedir', 'Giving', 'Moving',
+             'Server', 'TOSERVER_CLIENT_READY', 'Ð']
 while(i<length):
     stringToCheck = lines[i]
     if 'ACTION[Server]: ' in stringToCheck:#check only the action lines
         start = 'ACTION[Server]: '
         end = ' '
+        if('WARNING' not in stringToCheck):
+            username = " " + stringToCheck.split(start)[1].split(end)[0] + " "#get the username from the string
         if('joins game' not in stringToCheck):#filter out server actions
-            if('WARNING' not in stringToCheck):
-                username = " " + stringToCheck.split(start)[1].split(end)[0] + " "#get the username from the string
-                if('|' not in username):#check for special characters. Should ban these.
-                    if('protect' not in username):
-                        if('Announcing' not in username):
-                            if('CHAT' not in username):
-                                if('facedir' not in username):
-                                    if('Giving' not in username):
-                                        if('Moving' not in username):
-                                            if('Server' not in username):
-                                                if('TOSERVER_CLIENT_READY' not in username):
-                                                    if('Ð' not in username):
-                                                        uniqueNameList.append(username)#add username to collection of usernames
+            for word in junkWords:
+                if(word not in username):
+                    uniqueNameList.append(username)
     i=i+1
 #now create a set of unique names
 uniqueNameSet = set(uniqueNameList)
