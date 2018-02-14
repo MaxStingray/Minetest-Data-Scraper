@@ -1,3 +1,27 @@
+#implimentation of a stack
+class Stack:
+     def __init__(self):
+         self.items = []
+
+     def isEmpty(self):
+         return self.items == []
+
+     def push(self, item):
+         self.items.append(item)
+
+     def pop(self):
+         return self.items.pop()
+
+     def peek(self):
+         return self.items[len(self.items)-1]
+
+     def size(self):
+         return len(self.items)
+
+#import the datetime modules for later 
+import datetime
+from datetime import datetime, date, time, timedelta
+from PIL import Image
 #returns a percentage of a number
 def percent(part,whole):
     return 100*float(part)/float(whole)
@@ -26,10 +50,27 @@ damagedActions = []
 #list for junk items (irrelevant data)
 junk = []
 numJunk = 0
+timestamps = [] #list of timestamps to calculate playtime
+#as the timestamp will always be between the first two spaces in the string, we can extract it like this
+start = ' '
+end = ' '
 #check each line for actions and increment actions if matching
 i = 0
+#create stack object
+loginStack = Stack()
+#separate the timestamp elements into strings
+hours = ''
+minutes = ''
+seconds = ''
+totalPlaytime = timedelta()
 while(i<length):
     stringToCheck = lines[i]
+    try:
+        newTimeStamp = stringToCheck.split(start)[1].split(end)[0]
+        timestamps.append(newTimeStamp)
+    except:
+        print("whitespace line, remove this idiot")
+        
     if("digs" in stringToCheck):
         digActions.append(stringToCheck)
     elif("places" in stringToCheck):
@@ -54,6 +95,22 @@ while(i<length):
         writeActions.append(stringToCheck)
     elif("punched by" in stringToCheck):
         punchActions.append(stringToCheck)
+    elif(username + " joins game" in stringToCheck):
+        #remove final colon and extrac hours, minutes and seconds
+        hours,minutes,seconds = newTimeStamp[:-1].split(":")
+        #create timestamp we can do stuff with (:
+        loginTime = time(int(hours), int(minutes), int(seconds))
+        #push to the stack
+        loginStack.push(loginTime)#push
+    elif(username + " leaves game" in stringToCheck):
+        #remove final colon and extrac hours, minutes and seconds
+        hours,minutes,seconds = newTimeStamp[:-1].split(":")
+        #create timestamp we can do stuff with (:
+        logoutTime = time(int(hours), int(minutes), int(seconds))
+        #pop the login time and calculate the difference
+        thisDuration = datetime.combine(date.min, logoutTime) - datetime.combine(date.min, loginStack.pop())
+        #add to total playtime
+        totalPlaytime += thisDuration
     else:
         junk.append(stringToCheck)
     i+=1
@@ -73,4 +130,7 @@ print("object interactions: " + str(len(objInteractActions))+ " (" + str(percent
 print("use actions: " + str(len(useActions))+ " (" + str(percent(len(useActions),finalLength)) + " percent)")
 print("junk actions (discarded): " + str(len(junk)))
 print("number of lines: " + str(length))
+#time to calculate the total playtime!
+print("total playtime: " + str(totalPlaytime))
+    
 input()
