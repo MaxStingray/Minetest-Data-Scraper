@@ -50,12 +50,6 @@ damagedActions = []
 #list for junk items (irrelevant data)
 junk = []
 numJunk = 0
-timestamps = [] #list of timestamps to calculate playtime
-#as the timestamp will always be between the first two spaces in the string, we can extract it like this
-start = ' '
-end = ' '
-#check each line for actions and increment actions if matching
-i = 0
 #create stack object
 loginStack = Stack()
 #separate the timestamp elements into strings
@@ -63,14 +57,16 @@ hours = ''
 minutes = ''
 seconds = ''
 totalPlaytime = timedelta()
+#check each line for actions and append if matching
+i = 0
 while(i<length):
     stringToCheck = lines[i]
+    #as the timestamp will always be between the first two spaces in the string, we can extract it like this
     try:
-        newTimeStamp = stringToCheck.split(start)[1].split(end)[0]
-        timestamps.append(newTimeStamp)
-    except:
-        print("whitespace line, remove this idiot")
-        
+        newTimeStamp = stringToCheck.split(' ')[1].split(' ')[0]
+    except:#just ignore whitespace lines for now (there are many)
+        pass
+     #append the action collections    
     if("digs" in stringToCheck):
         digActions.append(stringToCheck)
     elif("places" in stringToCheck):
