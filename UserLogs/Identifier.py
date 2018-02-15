@@ -22,9 +22,18 @@ class Stack:
 import datetime
 from datetime import datetime, date, time, timedelta
 from PIL import Image
+from vectors import Point, Vector
+
 #returns a percentage of a number
 def percent(part,whole):
     return 100*float(part)/float(whole)
+
+#extract position vector from action line
+def getVec(someString):
+     vectorString = someString.split('(')[1].split(')')[0]
+     x,y,z = vectorString.split(',')
+     return Vector(x,y,z)
+
 #get and process the given username
 print('enter the username to identify (case sensitive)')
 username = input()
@@ -50,6 +59,9 @@ damagedActions = []
 #list for junk items (irrelevant data)
 junk = []
 numJunk = 0
+#positional data for digging and placing
+digPositions = []
+placePositions = []
 #create stack object
 loginStack = Stack()
 #separate the timestamp elements into strings
@@ -92,16 +104,16 @@ while(i<length):
     elif("punched by" in stringToCheck):
         punchActions.append(stringToCheck)
     elif(username + " joins game" in stringToCheck):
-        #remove final colon and extrac hours, minutes and seconds
+        #remove final colon and extract hours, minutes and seconds
         hours,minutes,seconds = newTimeStamp[:-1].split(":")
-        #create timestamp we can do stuff with (:
+        #create timestamp we can do stuff with
         loginTime = time(int(hours), int(minutes), int(seconds))
         #push to the stack
         loginStack.push(loginTime)#push
     elif(username + " leaves game" in stringToCheck):
-        #remove final colon and extrac hours, minutes and seconds
+        #remove final colon and extract hours, minutes and seconds
         hours,minutes,seconds = newTimeStamp[:-1].split(":")
-        #create timestamp we can do stuff with (:
+        #create timestamp we can do stuff with
         logoutTime = time(int(hours), int(minutes), int(seconds))
         #pop the login time and calculate the difference
         thisDuration = datetime.combine(date.min, logoutTime) - datetime.combine(date.min, loginStack.pop())
@@ -126,7 +138,7 @@ print("object interactions: " + str(len(objInteractActions))+ " (" + str(percent
 print("use actions: " + str(len(useActions))+ " (" + str(percent(len(useActions),finalLength)) + " percent)")
 print("junk actions (discarded): " + str(len(junk)))
 print("number of lines: " + str(length))
-#time to calculate the total playtime!
+#display the total playTime
 print("total playtime: " + str(totalPlaytime))
     
 input()
