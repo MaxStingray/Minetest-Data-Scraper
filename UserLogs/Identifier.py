@@ -140,5 +140,44 @@ print("junk actions (discarded): " + str(len(junk)))
 print("number of lines: " + str(length))
 #display the total playTime
 print("total playtime: " + str(totalPlaytime))
-    
+
+
+#let's make some graphs
+startTime = timedelta()
+totalHours = totalPlaytime.days * 24 + totalPlaytime.seconds/3600
+#get the total playtime in hours for visualisation
+print("total hours: " + str(totalHours))
+#round to next hour
+print("rounded total hours: " + str(int(round(totalHours))))
+#use the rounded hours as the graph x axis
+
+#dig graph
+#import matplotlib.pyplot as plt
+#import numpy as np
+#import pandas as pd
+#import seaborn as sns
+
+#new collection of timestamps specific to this action
+actionTimeStamps = []
+#collection of vector co-ordinates specific to this action
+actionPositions = []
+for action in digActions:
+     #get the string formatted timestamps and vectors
+     try:
+        newTimeStamp = action.split(' ')[1].split(' ')[0]
+        newVectorStr = action.split('(')[1].split(')')[0]
+     except:#just ignore whitespace lines for now (there are many)
+        pass
+     #grab the int components of each
+     hours,minutes,seconds = newTimeStamp[:-1].split(":")
+     x,y,z = newVectorStr.split(",")
+     #convert to time type
+     actionTime = time(int(hours), int(minutes), int(seconds))
+     #convert to vector type
+     actionPos = Vector(int(x),int(y),int(z))
+     #add to the collection
+     actionTimeStamps.append(actionTime)
+     actionPositions.append(actionPos)
+#now we have a collection of precise timestamps and a maximum range for them
+#as well as a collection of positions. Should be able to make graphs now.
 input()
