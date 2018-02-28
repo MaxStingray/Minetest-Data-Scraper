@@ -18,11 +18,19 @@ class Stack:
      def size(self):
          return len(self.items)
 
+#structure for complete actions to make em readable
+class CompleteAction:
+     def __init__(self):
+          self.action = ""
+          self.position = Vector(0,0,0)
+          self.time = time()
+
 #import the datetime modules for later 
 import datetime
 from datetime import datetime, date, time, timedelta
 from PIL import Image
 from vectors import Point, Vector
+from collections import Counter
 
 #returns a percentage of a number
 def percent(part,whole):
@@ -33,6 +41,7 @@ def getVec(someString):
      vectorString = someString.split('(')[1].split(')')[0]
      x,y,z = vectorString.split(',')
      return Vector(x,y,z)
+
 
 #get and process the given username
 print('enter the username to identify (case sensitive)')
@@ -150,22 +159,13 @@ print("total hours: " + str(totalHours))
 #round to next hour
 print("rounded total hours: " + str(int(round(totalHours))))
 #use the rounded hours as the graph x axis
-
-#dig graph
-#import matplotlib.pyplot as plt
-#import numpy as np
-#import pandas as pd
-#import seaborn as sns
-
-#new collection of timestamps specific to this action
-actionTimeStamps = []
-#collection of vector co-ordinates specific to this action
-actionPositions = []
+actions = []
 for action in digActions:
      #get the string formatted timestamps and vectors
      try:
         newTimeStamp = action.split(' ')[1].split(' ')[0]
         newVectorStr = action.split('(')[1].split(')')[0]
+        newBlock = action.split('digs ')[1].split(' at')[0]
      except:#just ignore whitespace lines for now (there are many)
         pass
      #grab the int components of each
@@ -175,9 +175,22 @@ for action in digActions:
      actionTime = time(int(hours), int(minutes), int(seconds))
      #convert to vector type
      actionPos = Vector(int(x),int(y),int(z))
-     #add to the collection
-     actionTimeStamps.append(actionTime)
-     actionPositions.append(actionPos)
+     newAction = CompleteAction()
+     newAction.action = newBlock
+     newAction.position = actionPos
+     newAction.time = actionTime
+     actions.append(newAction)
 #now we have a collection of precise timestamps and a maximum range for them
 #as well as a collection of positions. Should be able to make graphs now.
+#collection of all blocks interacted with by the player
+interactedBlocks = []
+for action in actions:
+     interactedBlocks.append(action.action)
+
+#use counter :D
+blockCounter = Counter(interactedBlocks)
+
+for block in blockCounter:
+     print('%s : %d' % (block, blockCounter[block]))
+
 input()
