@@ -65,6 +65,7 @@ useActions = []
 interactActions = []
 objInteractActions = []
 damagedActions = []
+totalActions = []
 #list for junk items (irrelevant data)
 junk = []
 numJunk = 0
@@ -90,18 +91,23 @@ while(i<length):
      #append the action collections    
     if("digs" in stringToCheck):
         digActions.append(stringToCheck)
+        totalActions.append(stringToCheck)
     elif("places" in stringToCheck):
         placeActions.append(stringToCheck)
+        totalActions.append(stringToCheck)
     elif("CHAT" in stringToCheck):
         chatActions.append(stringToCheck)
     elif("punches" in stringToCheck):
         punchActions.append(stringToCheck)
+        totalActions.append(stringToCheck)
     elif("crafts" in stringToCheck):
         craftActions.append(stringToCheck)
     elif("moves" in stringToCheck):
         storeActions.append(stringToCheck)
+        totalActions.append(stringToCheck)
     elif("takes" in stringToCheck):
         storeActions.append(stringToCheck)
+        totalActions.append(stringToCheck)
     elif("right-clicks" in stringToCheck):
         interactActions.append(stringToCheck)
     elif("activates" in stringToCheck):
@@ -110,8 +116,10 @@ while(i<length):
         useActions.append(stringToCheck)
     elif("wrote" in stringToCheck):
         writeActions.append(stringToCheck)
+        totalActions.append(stringToCheck)
     elif("punched by" in stringToCheck):
         punchActions.append(stringToCheck)
+        totalActions.append(stringToCheck)
     elif(username + " joins game" in stringToCheck):
         #remove final colon and extract hours, minutes and seconds
         hours,minutes,seconds = newTimeStamp[:-1].split(":")
@@ -160,12 +168,19 @@ print("total hours: " + str(totalHours))
 print("rounded total hours: " + str(int(round(totalHours))))
 #use the rounded hours as the graph x axis
 actions = []
-for action in digActions:
+for action in totalActions:
      #get the string formatted timestamps and vectors
      try:
+        verb = action.split(username + ' ')[1].split(' ')[0]
         newTimeStamp = action.split(' ')[1].split(' ')[0]
         newVectorStr = action.split('(')[1].split(')')[0]
-        newBlock = action.split('digs ')[1].split(' at')[0]
+        newBlock = action.split(verb)[1].split(' at')[0]
+        if('LuaEntitySAO' in newBlock):
+             newBlock = ' Monster'
+        if('chest' in newBlock):
+             newBlock = ' Chest'
+        if('sign' in newBlock):
+             newBlock = ' Sign'
      except:#just ignore whitespace lines for now (there are many)
         pass
      #grab the int components of each
@@ -174,7 +189,7 @@ for action in digActions:
      #convert to time type
      actionTime = time(int(hours), int(minutes), int(seconds))
      #convert to vector type
-     actionPos = Vector(int(x),int(y),int(z))
+     actionPos = Vector(float(x),float(y),float(z))
      newAction = CompleteAction()
      newAction.action = newBlock
      newAction.position = actionPos
@@ -193,4 +208,15 @@ blockCounter = Counter(interactedBlocks)
 for block in blockCounter:
      print('%s : %d' % (block, blockCounter[block]))
 
+#calculate distance travelled
+import numpy as np
+i = 1
+dist = 0
+while(i < len(actions)):
+     a = np.array((actions[i].position.x, actions[i].position.y, actions[i].position.z))
+     b = np.array((actions[i - 1].position.x, actions[i - 1].position.y, actions[i - 1].position.z))
+     dist += np.linalg.norm(a-b)
+     i += 1
+
+print("total distance travelled: " + str(int(round(dist))) + " blocks")
 input()
