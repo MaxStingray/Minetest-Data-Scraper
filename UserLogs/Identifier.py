@@ -1,3 +1,10 @@
+#import the datetime modules for later
+import datetime
+from datetime import datetime, date, time, timedelta
+from PIL import Image
+from vectors import Point, Vector
+from collections import Counter
+
 #implimentation of a stack
 class Stack:
      def __init__(self):
@@ -22,16 +29,42 @@ class Stack:
 class CompleteAction:
      def __init__(self):
           self.action = ""
+          self.verb = ""
           self.position = Vector(0,0,0)
           self.time = time()
+          self.date = ""
+     
+#structure for describing a play session
+class PlaySession:
+     def __init__(self):
+          self.start = time(0,0,0)
+          self.numChunks = 0
+          self.allActionsInChunk = []
+          self.sessionDate = ""
 
-#import the datetime modules for later 
-import datetime
-from datetime import datetime, date, time, timedelta
-from PIL import Image
-from vectors import Point, Vector
-from collections import Counter
+     def setStart(self, startTime):
+          self.start = startTime
 
+     def getStart(self):
+          return self.start
+
+     def setChunks(self, totalChunks):
+          self.numChunks = totalChunks
+
+     def getChunks(self):
+          return self.numChunks
+     
+
+#a 10 minute chunk and all actions within it
+class Chunk:
+     def __init__(self):
+          self.actionsInChunk = []
+
+     def addAction(self, action):
+          self.actionsInChunk.append(action)
+
+     def getActions(self):
+          return self.actionsInChunk
 #returns a percentage of a number
 def percent(part,whole):
     return 100*float(part)/float(whole)
@@ -41,6 +74,48 @@ def getVec(someString):
      vectorString = someString.split('(')[1].split(')')[0]
      x,y,z = vectorString.split(',')
      return Vector(x,y,z)
+
+#add timedelta to time
+def timePlus(time, timedelta):
+     start = datetime(
+          2000, 1, 1,
+          hour = time.hour, minute = time.minute, second = time.second)
+     end = start+timedelta
+     return end.time()
+
+def ChunkData(sessions, actions):
+     print("breaking data into chunks...")
+     completeChunks = []
+     #loop through all play sessions
+     for session in sessions:
+          #get the start time of the session
+          start = session.getStart()
+          currentDate = session.sessionDate
+          #set a "current" to keep track of current increment
+          current = datetime.combine(date.min, start)
+          #iterate through the number of chunks per session
+          x = 0
+          while(x < session.numChunks):
+               #create a new chunk object for the session
+               nextChunk = Chunk()
+               #loop through all actions
+               for action in actions:
+                    if(action.date == currentDate):
+                         #if timetstamp is between current and current + 10 min
+                         endOfChunk = timePlus(current, timedelta(minutes = 10))
+                         if(datetime.combine(date.min,action.time) >= current):
+                              if(action.time <= endOfChunk):
+                                   #add the action to the chunk object
+                                   nextChunk.addAction(action)
+                                   #add the finished chunk to the collection of chunks
+                                   if(nextChunk not in completeChunks):
+                                        completeChunks.append(nextChunk)
+               #increment current to keep track
+               current = datetime.combine(date.min,endOfChunk)
+               x += 1
+     print("Done!")
+     return completeChunks
+     
 
 
 #get and process the given username
@@ -79,8 +154,11 @@ hours = ''
 minutes = ''
 seconds = ''
 totalPlaytime = timedelta()
+#the number of 10 minute chunks
 #check each line for actions and append if matching
 i = 0
+#collection of all play sessions to find chunks
+allSessions = []
 while(i<length):
     stringToCheck = lines[i]
     #as the timestamp will always be between the first two spaces in the string, we can extract it like this
@@ -132,15 +210,31 @@ while(i<length):
         hours,minutes,seconds = newTimeStamp[:-1].split(":")
         #create timestamp we can do stuff with
         logoutTime = time(int(hours), int(minutes), int(seconds))
+        loginTime = loginStack.pop()
         #pop the login time and calculate the difference
-        thisDuration = datetime.combine(date.min, logoutTime) - datetime.combine(date.min, loginStack.pop())
+        thisDuration = datetime.combine(date.min, logoutTime) - datetime.combine(date.min, loginTime)
         #add to total playtime
         totalPlaytime += thisDuration
+        #find number of 10 minute chunks in this period
+        #set start time to 0
+        totalPlaytimeForCalc = timedelta()
+        #add the duration
+        totalPlaytimeForCalc += thisDuration
+        #calculate number of 10 minute periods, rounded to nearest integer
+        numberOfTenMinuteChunks = int(round((totalPlaytimeForCalc.seconds % 3600) / 60) / 10)
+        nextSession = PlaySession()
+        nextSession.setStart(loginTime)
+        nextSession.setChunks(numberOfTenMinuteChunks)
+        nextSession.sessionDate = stringToCheck[0:10]
+        #print("session start time: " + str(nextSession.getStart()) + " , " + "number of chunks: " + str(nextSession.getChunks()))
+        allSessions.append(nextSession)
     else:
         junk.append(stringToCheck)
     i+=1
         
 finalLength = (length - len(junk))
+
+
 #find percentage values and print
 print("place actions: " + str(len(placeActions)) + " (" + str(percent(len(placeActions),finalLength)) + " percent)")
 print("dig actions: " + str(len(digActions))+ " (" + str(percent(len(digActions),finalLength)) + " percent)")
@@ -161,7 +255,9 @@ print("total playtime: " + str(totalPlaytime))
 
 #let's make some graphs
 startTime = timedelta()
+#this gets total number of hours
 totalHours = totalPlaytime.days * 24 + totalPlaytime.seconds/3600
+#we want the number of ten minute periods
 #get the total playtime in hours for visualisation
 print("total hours: " + str(totalHours))
 #round to next hour
@@ -173,6 +269,7 @@ for action in totalActions:
      try:
         verb = action.split(username + ' ')[1].split(' ')[0]
         newTimeStamp = action.split(' ')[1].split(' ')[0]
+        newDate = action[0:10]
         newVectorStr = action.split('(')[1].split(')')[0]
         newBlock = action.split(verb)[1].split(' at')[0]
         if('LuaEntitySAO' in newBlock):
@@ -191,27 +288,33 @@ for action in totalActions:
      #convert to vector type
      actionPos = Vector(float(x),float(y),float(z))
      newAction = CompleteAction()
+     newAction.verb = verb
      newAction.action = newBlock
      newAction.position = actionPos
      newAction.time = actionTime
+     newAction.date = newDate
      actions.append(newAction)
 #now we have a collection of precise timestamps and a maximum range for them
 #as well as a collection of positions. Should be able to make graphs now.
+
+chunkList = ChunkData(allSessions, actions)
+totalbla = 0
+chunkiterator = 0
+for chunk in chunkList:
+     print("chunk #" + str(chunkiterator))
+     print(str(len(chunk.actionsInChunk)))
+     chunkiterator += 1
+     
 #collection of all blocks interacted with by the player
 interactedBlocks = []
 for action in actions:
      interactedBlocks.append(action.action)
 
-#use counter :D
-blockCounter = Counter(interactedBlocks)
-
-for block in blockCounter:
-     print('%s : %d' % (block, blockCounter[block]))
-
 #calculate distance travelled
 import numpy as np
 i = 1
 dist = 0
+#for every action, find the distance between its position and the one preceeding it. Add to total distance
 while(i < len(actions)):
      a = np.array((actions[i].position.x, actions[i].position.y, actions[i].position.z))
      b = np.array((actions[i - 1].position.x, actions[i - 1].position.y, actions[i - 1].position.z))
@@ -219,4 +322,15 @@ while(i < len(actions)):
      i += 1
 
 print("total distance travelled: " + str(int(round(dist))) + " blocks")
+
+#use counter :D
+blockCounter = Counter(interactedBlocks)
+
+for block in blockCounter:
+     print('%s : %d' % (block, blockCounter[block]))
+
+
+
+#find action with highest count
+#make first assumption as to archetype
 input()
