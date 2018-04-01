@@ -222,7 +222,24 @@ def WriteCSV(data, actionType, username):
           #print("unable to write csv file (error)")
           
           
-
+def ProcessUserInput(username, chunks):
+     actionTypes = ["digs","places","punches","punched by", "crafts",
+               "moves","takes","right-clicks","activates","uses",
+               "wrote", "or type <all> to get each"]
+     print("enter the action type to calculate the average. Available types are: ")
+     for a in actionTypes:
+          print(a)
+     actionType = input()
+     print(actionType)
+     if(actionType == "all"):
+          for a in actionTypes:
+               print(a + " average per chunk: " + str(int(round(ReturnChunkMetrics(chunks, a, username)))))
+     elif(actionType not in actionTypes):
+          print("invalid action type, try again")
+     else:
+          print(actionType + " average per chunk: " +str(int(round(ReturnChunkMetrics(chunks, actionType, username)))))
+     ProcessUserInput(username, chunks)
+     
 #get and process the given username
 print('enter the username to identify (case sensitive)')
 username = input()
@@ -234,13 +251,15 @@ allSessions = parseIntoSessions(username, lines)
 #print(len(allSessions))
 allChunks = SessionsIntoChunks(username, allSessions)
 
-actionTypes = ["digs","places","punches","punched by", "crafts",
-               "moves","takes","right-clicks","activates","uses",
-               "wrote", "or type <all> to get each"]
+ProcessUserInput(username, allChunks)
 
-print("enter the action type to calculate the average. Available types are: ")
-for a in actionTypes:
-     print(a)
-actionType = input()
-print(actionType + " average per chunk: " +str(int(round(ReturnChunkMetrics(allChunks, actionType, username)))))
+#actionTypes = ["digs","places","punches","punched by", "crafts",
+ #              "moves","takes","right-clicks","activates","uses",
+  #             "wrote", "or type <all> to get each"]
+
+#print("enter the action type to calculate the average. Available types are: ")
+#for a in actionTypes:
+ #    print(a)
+#actionType = input()
+#print(actionType + " average per chunk: " +str(int(round(ReturnChunkMetrics(allChunks, actionType, username)))))
           
