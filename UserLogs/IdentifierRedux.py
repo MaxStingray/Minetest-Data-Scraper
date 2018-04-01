@@ -52,6 +52,7 @@ class Archetypes(Enum):
      FARMER = 3
      GRIEFER = 4
 
+#ensure a directory exists, and create one if it doesn't
 def ensure_dir(filePath):
      directory = filePath
      print(directory)
@@ -92,6 +93,7 @@ def findAverage(dataSet):
      avg = float(sum(dataSet))/len(dataSet)
      return avg
 
+#parse file into play sessions (set of actions between login/logout time)
 def parseIntoSessions(username, linesToParse):
      #list of parsed sessions to return
      print("breaking data into sessions...")
@@ -149,7 +151,8 @@ def parseIntoSessions(username, linesToParse):
           i += 1
      print("done!")
      return parsedSessions
-     
+
+#parse sessions into 10 minute chunks
 def SessionsIntoChunks(username, parsedSessions):
      print("breaking sessions into chunks...")
      parsedChunks = []
@@ -200,7 +203,6 @@ def ReturnChunkMetrics(parsedChunks, actionType, username):
                if(action.verb == actionType):
                     #print(action.time, action.verb, action.block)
                     actionCount += 1
-               #you need the number of times this action was encountered, not the action itself
           totalForThisChunk = actionCount
           chunkTotals.append(totalForThisChunk)
           chunkCounter += 1
@@ -209,19 +211,20 @@ def ReturnChunkMetrics(parsedChunks, actionType, username):
                 chunkTotals]
      WriteCSV(csvData, actionType, username)
      return averagePerChunk
-                    
+
+#write the metrics to a csv file we can use to create graphs              
 def WriteCSV(data, actionType, username):
      #try:
      directory = ensure_dir(username + " metrics")
-     newCSV = open(str(directory) + '/' + actionType + 'Metrics.csv', 'w')
+     newCSV = open(directory + '/' + actionType + 'Metrics.csv', 'w')
      with newCSV:
           writer = csv.writer(newCSV)
           writer.writerows(data)
      print("csv file successfully created")
      #except:
           #print("unable to write csv file (error)")
-          
-          
+
+#process user input    
 def ProcessUserInput(username, chunks):
      actionTypes = ["digs","places","punches","punched by", "crafts",
                "moves","takes","right-clicks","activates","uses",
@@ -252,14 +255,3 @@ allSessions = parseIntoSessions(username, lines)
 allChunks = SessionsIntoChunks(username, allSessions)
 
 ProcessUserInput(username, allChunks)
-
-#actionTypes = ["digs","places","punches","punched by", "crafts",
- #              "moves","takes","right-clicks","activates","uses",
-  #             "wrote", "or type <all> to get each"]
-
-#print("enter the action type to calculate the average. Available types are: ")
-#for a in actionTypes:
- #    print(a)
-#actionType = input()
-#print(actionType + " average per chunk: " +str(int(round(ReturnChunkMetrics(allChunks, actionType, username)))))
-          
