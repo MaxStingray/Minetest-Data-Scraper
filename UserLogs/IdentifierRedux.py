@@ -1,5 +1,6 @@
 import datetime
 import csv
+import os
 from datetime import datetime, date, time, timedelta
 from PIL import Image
 from vectors import Point, Vector
@@ -51,7 +52,13 @@ class Archetypes(Enum):
      FARMER = 3
      GRIEFER = 4
 
-          
+def ensure_dir(filePath):
+     directory = filePath
+     print(directory)
+     if not os.path.exists(directory):
+          directory = os.mkdir(directory)
+     return directory
+        
 #class for describing a 10 minute chunk within a session
 class Chunk:
      def __init__(self):
@@ -180,7 +187,7 @@ def SessionsIntoChunks(username, parsedSessions):
      print("done!")                    
      return parsedChunks
 #returns a normalised average of the given action type (eg. place, dig, etc)
-def ReturnChunkMetrics(parsedChunks, actionType):
+def ReturnChunkMetrics(parsedChunks, actionType, username):
      chunkTotals = []
      chunkIDs = []
      chunkCounter = 1
@@ -200,18 +207,19 @@ def ReturnChunkMetrics(parsedChunks, actionType):
      averagePerChunk = findAverage(chunkTotals)
      csvData = [[actionType + " Actions in Chunk"],
                 chunkTotals]
-     WriteCSV(csvData, actionType)
+     WriteCSV(csvData, actionType, username)
      return averagePerChunk
                     
-def WriteCSV(data, actionType):
-     try:
-          newCSV = open(actionType + 'Metrics.csv', 'w')
-          with newCSV:
-               writer = csv.writer(newCSV)
-               writer.writerows(data)
-          print("csv file successfully created")
-     except:
-          print("unable to write csv file (error)")
+def WriteCSV(data, actionType, username):
+     #try:
+     directory = ensure_dir(username + " metrics")
+     newCSV = open(str(directory) + '/' + actionType + 'Metrics.csv', 'w')
+     with newCSV:
+          writer = csv.writer(newCSV)
+          writer.writerows(data)
+     print("csv file successfully created")
+     #except:
+          #print("unable to write csv file (error)")
           
           
 
@@ -226,7 +234,13 @@ allSessions = parseIntoSessions(username, lines)
 #print(len(allSessions))
 allChunks = SessionsIntoChunks(username, allSessions)
 
-print("enter the action type to calculate the average")
+actionTypes = ["digs","places","punches","punched by", "crafts",
+               "moves","takes","right-clicks","activates","uses",
+               "wrote", "or type <all> to get each"]
+
+print("enter the action type to calculate the average. Available types are: ")
+for a in actionTypes:
+     print(a)
 actionType = input()
-print(actionType + " average per chunk: " +str(int(round(ReturnChunkMetrics(allChunks, actionType)))))
+print(actionType + " average per chunk: " +str(int(round(ReturnChunkMetrics(allChunks, actionType, username)))))
           
