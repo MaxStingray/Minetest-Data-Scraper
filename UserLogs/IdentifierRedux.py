@@ -1,4 +1,5 @@
 import datetime
+import csv
 from datetime import datetime, date, time, timedelta
 from PIL import Image
 from vectors import Point, Vector
@@ -42,6 +43,14 @@ class PlaySession:
           self.sessionEndTime = time()
           self.totalSessionTime = timedelta()
           self.sessionID = 0
+
+from enum import Enum
+class Archetypes(Enum):
+     BUILDER = 1
+     MINER = 2
+     FARMER = 3
+     GRIEFER = 4
+
           
 #class for describing a 10 minute chunk within a session
 class Chunk:
@@ -71,8 +80,14 @@ def timePlus(time, timedelta):
 def splitString(stringToSplit, start, end):
      return stringToSplit.split(start)[1].split(end)[0]
 
+#find the average of a given dataset
+def findAverage(dataSet):
+     avg = float(sum(dataSet))/len(dataSet)
+     return avg
+
 def parseIntoSessions(username, linesToParse):
      #list of parsed sessions to return
+     print("breaking data into sessions...")
      parsedSessions = []
      loginStack = Stack()
      i = 0
@@ -95,9 +110,7 @@ def parseIntoSessions(username, linesToParse):
                          hours,minutes,seconds = timeStamp[:-1].split(":")
                          newSession.sessionEndTime = time(int(hours), int(minutes), int(seconds))
                          loginTime = newSession.sessionStartTime
-                         #pop the login time and calculate the difference
                          thisDuration = datetime.combine(date.min, newSession.sessionEndTime) - datetime.combine(date.min, loginTime)
-                         #add to session playtime
                          newSession.totalSessionTime += thisDuration
                          newSession.sessionID = sessionCount
                          parsedSessions.append(newSession)
@@ -112,6 +125,7 @@ def parseIntoSessions(username, linesToParse):
                               newTimeStamp = splitString(stringToCheck, ' ', ' ')
                               hours,minutes,seconds = newTimeStamp[:-1].split(":")
                               newAction.time = time(int(hours), int(minutes), int(seconds))
+                              newAction.time = datetime.combine(date.min, newAction.time)
                               newAction.verb = splitString(stringToCheck, username + ' ', ' ')
                               newAction.block = splitString(stringToCheck, newAction.verb, ' at')
                               if('LuaEntitySAO' in newAction.block):
@@ -120,19 +134,23 @@ def parseIntoSessions(username, linesToParse):
                                    newAction.block = ' Chest'
                               if('sign' in newAction.block):
                                    newAction.block = ' Sign'
+                              #TODO: Get position vector with getVec, add to action
                               newSession.actionsInSession.append(newAction)
                          else:
                               pass
                          j += 1
           i += 1
+     print("done!")
      return parsedSessions
      
 def SessionsIntoChunks(username, parsedSessions):
+     print("breaking sessions into chunks...")
      parsedChunks = []
+     allCheckedActions = []
      chunkTime = timedelta(minutes = 10)
      for session in parsedSessions:
-          newChunk = Chunk()
           if(session.totalSessionTime <= chunkTime):
+               newChunk = Chunk()
                newChunk.sessionID = session.sessionID
                newChunk.actionsInChunk = session.actionsInSession
                parsedChunks.append(newChunk)
@@ -142,28 +160,61 @@ def SessionsIntoChunks(username, parsedSessions):
                numberOfChunks = int(round(session.totalSessionTime.seconds % 3600) / 60) / 10
                chunkIterator = 0
                while(chunkIterator <= numberOfChunks):
-                    print("beginning of loop: " + str(chunkIterator), str(numberOfChunks))
+                    newChunk = Chunk()
+                    #print("**********NEW CHUNK" + " #" + str(chunkIterator) + "**********")
                     endOfChunk = timePlus(current, chunkTime)
-                    print("end of current chunk: " + str(endOfChunk))
-                    #print(str(endOfChunk))
+                    endOfChunk = datetime.combine(date.min, endOfChunk)
+                    #print("start of chunk: " + str(current))
+                    #print("end of chunk: " + str(endOfChunk))
                     for action in session.actionsInSession:
-                         if(datetime.combine(date.min, action.time) >= current):
-                                   if(action.time <= endOfChunk):
-                                        newChunk.actionsInChunk.append(action)          
+                         action.time = timePlus(action.time, timedelta(minutes = 0))
+                         action.time = datetime.combine(date.min, action.time)
+                         if(action.time >= current):
+                              if(action.time <= endOfChunk):
+                                   newChunk.actionsInChunk.append(action)
+                                   allCheckedActions.append(action)
                     newChunk.sessionID = session.sessionID
-                         #print(str(len(newChunk.actionsInChunk)))
-                    
                     parsedChunks.append(newChunk)
-                    print("************NEW CHUNK************")
-                    print("end of loop (appending): " + str(chunkIterator), str(numberOfChunks))
-                    current = timePlus(current, chunkTime)
-                    current = datetime.combine(date.min, current)
-                    print("current at end of loop: " + str(current))
-                    #print(str(current))
+                    current = endOfChunk
                     chunkIterator += 1
-                    print("chunk itr end: " + str(chunkIterator))
-                         
+     print("done!")                    
      return parsedChunks
+#returns a normalised average of the given action type (eg. place, dig, etc)
+def ReturnChunkMetrics(parsedChunks, actionType):
+     chunkTotals = []
+     chunkIDs = []
+     chunkCounter = 1
+     for chunk in parsedChunks:
+          #print("*********CHECKING NEXT CHUNK**********")
+          matchingActions = []
+          chunkIDs.append(chunkCounter)
+          actionCount = 0
+          for action in chunk.actionsInChunk:
+               if(action.verb == actionType):
+                    #print(action.time, action.verb, action.block)
+                    actionCount += 1
+               #you need the number of times this action was encountered, not the action itself
+          totalForThisChunk = actionCount
+          chunkTotals.append(totalForThisChunk)
+          chunkCounter += 1
+     averagePerChunk = findAverage(chunkTotals)
+     csvData = [[actionType + " Actions in Chunk"],
+                chunkTotals]
+     WriteCSV(csvData, actionType)
+     return averagePerChunk
+                    
+def WriteCSV(data, actionType):
+     try:
+          newCSV = open(actionType + 'Metrics.csv', 'w')
+          with newCSV:
+               writer = csv.writer(newCSV)
+               writer.writerows(data)
+          print("csv file successfully created")
+     except:
+          print("unable to write csv file (error)")
+          
+          
+
 #get and process the given username
 print('enter the username to identify (case sensitive)')
 username = input()
@@ -172,11 +223,10 @@ logToCheck = open("C:/Users/Josh/Documents/Serverlogs/UserLogs/ "+username+" .tx
 #read line by line
 lines = logToCheck.read().splitlines()
 allSessions = parseIntoSessions(username, lines)
-print(len(allSessions))
+#print(len(allSessions))
 allChunks = SessionsIntoChunks(username, allSessions)
 
-for chunk in allChunks:
-     for action in chunk.actionsInChunk:
-          print(str(action.time))
-
+print("enter the action type to calculate the average")
+actionType = input()
+print(actionType + " average per chunk: " +str(int(round(ReturnChunkMetrics(allChunks, actionType)))))
           
