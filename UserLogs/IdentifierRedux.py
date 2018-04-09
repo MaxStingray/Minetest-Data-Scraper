@@ -33,8 +33,8 @@ class CompleteAction:
           self.time = time()
           self.verb = ""
           self.block = ""
-#returns a complete action object from an action string
 
+          
 #class for describing a play session
 class PlaySession:
      def __init__(self):
@@ -50,7 +50,12 @@ class Archetypes(Enum):
      BUILDER = 1
      MINER = 2
      FARMER = 3
-     GRIEFER = 4
+     UNKNOWN = 4
+
+class Archetype:
+     def __init__(self):
+          self.chunks = []
+          self.classification = Archetypes.UNKNOWN
 
 #ensure a directory exists, and create one if it doesn't
 def ensure_dir(filePath):
@@ -69,6 +74,11 @@ class Chunk:
 #returns a percentage of a number
 def percent(part,whole):
     return 100*float(part)/float(whole)
+
+def percentageIncrease(first, second):
+     diff = second - first
+     increase = diff/first * 100
+     return increase
 
 #extract position vector from action line
 def getVec(someString):
@@ -189,8 +199,9 @@ def SessionsIntoChunks(username, parsedSessions):
                     chunkIterator += 1
      print("done!")                    
      return parsedChunks
+
 #returns a normalised average of the given action type (eg. place, dig, etc)
-def ReturnChunkMetrics(parsedChunks, actionType, username):
+def ReturnChunkMetrics(parsedChunks, actionType, username, writeToFile):
      chunkTotals = []
      chunkIDs = []
      chunkCounter = 1
@@ -207,28 +218,67 @@ def ReturnChunkMetrics(parsedChunks, actionType, username):
           chunkTotals.append(totalForThisChunk)
           chunkCounter += 1
      averagePerChunk = findAverage(chunkTotals)
-     csvData = [[actionType + " Actions in Chunk"],
-                chunkTotals]
-     WriteCSV(csvData, actionType, username)
+     if(writeToFile):
+          csvData = [[actionType + " Actions in Chunk"],
+                     chunkTotals]
+          WriteCSV(csvData, actionType, username)
      return averagePerChunk
 
+def ArchetypeClassification(chunks, username):
+     archetypeAssumption = Archetypes.UNKNOWN
+     #get the averages of each action type in the given chunks
+     digAverage = ReturnChunkMetrics(chunks, "digs", username, False)
+     placeAverage = ReturnChunkMetrics(chunks, "places", username, False)
+     chestAverage = ReturnChunkMetrics(chunks, "moves", username, False)
+     #initialise the min and max bounds of each classification
+     unknownMin, unknownMax = 0, 29
+     builderMin, builderMax = 60, 89
+     farmerMin, farmerMax = 30, 59
+     minerMin = 90
+     #find the dig/place percentage increase
+     increase = percentageIncrease(placeAverage, digAverage)
+     print(str(increase))
+     print("dig average = " + str(digAverage))
+     print("place average = " + str(placeAverage))
+     #check against the bounds
+     if increase >= unknownMin and increase <= unknownMax:
+          archetypeAssumption = Archetypes.UNKNOWN
+     elif increase >= builderMin and increase <= builderMax:
+          archetypeAssumption = Archetypes.BUILDER
+     elif increase >= minerMin:
+          archetypeAssumption = Archetypes.MINER
+     elif increase < unknownMin:
+          archetypeAssumption = Archetypes.BUILDER
+     elif increase >= farmerMin and increase <= farmerMax:
+          if(chestAverage > 2):
+               archetypeAssumption = Archetypes.FARMER
+          else:
+               archetypeAssumption = Archetypes.BUILDER
+     else:
+          archetypeAssumption = Archetypes.UNKNOWN
+
+     finalArchetype = Archetype()
+     finalArchetype.chunks = chunks
+     finalArchetype.classification = archetypeAssumption
+
+     return finalArchetype
+#def ContextCheck:
+
+#def FinalClassification:
 #write the metrics to a csv file we can use to create graphs              
 def WriteCSV(data, actionType, username):
-     #try:
      directory = ensure_dir(username + " metrics")
-     newCSV = open(directory + '/' + actionType + 'Metrics.csv', 'w')
+     newCSV = open(str(directory) + '/' + actionType + 'Metrics.csv', 'w')
      with newCSV:
           writer = csv.writer(newCSV)
           writer.writerows(data)
      print("csv file successfully created")
-     #except:
-          #print("unable to write csv file (error)")
 
 #process user input    
 def ProcessUserInput(username, chunks):
      actionTypes = ["digs","places","punches","punched by", "crafts",
                "moves","takes","right-clicks","activates","uses",
-               "wrote", "or type <all> to get each"]
+               "wrote", "or type <identify> to get classification"]
      print("enter the action type to calculate the average. Available types are: ")
      for a in actionTypes:
           print(a)
@@ -236,11 +286,20 @@ def ProcessUserInput(username, chunks):
      print(actionType)
      if(actionType == "all"):
           for a in actionTypes:
-               print(a + " average per chunk: " + str(int(round(ReturnChunkMetrics(chunks, a, username)))))
+               print(a + " average per chunk: " + str(int(round(ReturnChunkMetrics(chunks, a, username, True)))))
+     elif(actionType == "identify"):
+          i = 12
+          chunksToIdentify = []
+          while(i <= 18):
+               if(chunks[i]):
+                    chunksToIdentify.append(chunks[i])
+               i += 1
+          archetype = ArchetypeClassification(chunksToIdentify, username)
+          print(str(archetype.classification))
      elif(actionType not in actionTypes):
           print("invalid action type, try again")
      else:
-          print(actionType + " average per chunk: " +str(int(round(ReturnChunkMetrics(chunks, actionType, username)))))
+          print(actionType + " average per chunk: " +str(int(round(ReturnChunkMetrics(chunks, actionType, username, True)))))
      ProcessUserInput(username, chunks)
      
 #get and process the given username
@@ -251,7 +310,9 @@ logToCheck = open("C:/Users/Josh/Documents/Serverlogs/UserLogs/ "+username+" .tx
 #read line by line
 lines = logToCheck.read().splitlines()
 allSessions = parseIntoSessions(username, lines)
+print(str(len(allSessions)))
 #print(len(allSessions))
 allChunks = SessionsIntoChunks(username, allSessions)
+print(str(len(allChunks)))
 
 ProcessUserInput(username, allChunks)
