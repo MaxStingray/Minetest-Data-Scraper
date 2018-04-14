@@ -52,10 +52,31 @@ class Archetypes(Enum):
      FARMER = 3
      UNKNOWN = 4
 
+class Motivations(Enum):
+     ACTION = 1
+     SOCIAL = 2
+     MASTERY = 3
+     ACHIEVEMENT = 4
+     IMMERSION = 5
+     CREATIVE = 6
+     UNKNOWN = 7
+
+class Motivation:
+     def __init__(self):
+          self.chunks = []
+          self.type = Motivations.UNKNOWN
+          self.subType = Motivations.UNKNOWN
+
 class Archetype:
      def __init__(self):
           self.chunks = []
           self.classification = Archetypes.UNKNOWN
+
+class FinalClassification:
+     def __init__(self):
+          self.motivation = Motivations.UNKNOWN
+          self.subMotivation = Motivations.UNKNOWN
+          self.Archetype = Archetypes.UNKNOWN
 
 #ensure a directory exists, and create one if it doesn't
 def ensure_dir(filePath):
@@ -103,6 +124,40 @@ def findAverage(dataSet):
      avg = float(sum(dataSet))/len(dataSet)
      return avg
 
+class Block:
+     def __init__(self):
+          self.name = ""
+          self.attributes = []
+
+#load the block attributes dictionary
+def loadBlockDictionary():
+     print("processing block dictionary...")
+     blockDict = []
+     separator = "###"
+     dictFile = open("C:/Users/Josh/Documents/ServerLogs/blockProperties.txt", 'r', errors='ignore')
+     linesInFile = dictFile.read().splitlines()
+     i = 0
+     j = i
+     while(i<len(linesInFile)):
+          if separator in linesInFile[i]:
+               newBlock = Block()
+               j = i+1
+               while(j<len(linesInFile)):
+                    if newBlock.name is "" and separator not in linesInFile[j]:
+                         newBlock.name = linesInFile[j]
+                         j = j+1
+                    elif separator not in linesInFile[j]:
+                         newBlock.attributes.append(linesInFile[j])
+                         j = j+1
+                    elif separator in linesInFile[j]:
+                         blockDict.append(newBlock)
+                         i = j
+                         break
+               if i+1 == len(linesInFile):
+                    break
+     print("done!")
+     return blockDict
+     
 #parse file into play sessions (set of actions between login/logout time)
 def parseIntoSessions(username, linesToParse):
      #list of parsed sessions to return
@@ -262,9 +317,54 @@ def ArchetypeClassification(chunks, username):
      finalArchetype.classification = archetypeAssumption
 
      return finalArchetype
-#def ContextCheck:
 
-#def FinalClassification:
+def ContextCheck(chunks, blockDictionary):
+     finalMotivation = Motivation()
+     #totals
+     ActionTotal = 0
+     SocialTotal = 0
+     MasteryTotal = 0
+     AchievementTotal = 0
+     ImmersionTotal = 0
+     CreativityTotal = 0
+     FarmingTotal = 0
+     #TODO all this
+     for chunk in chunks:
+          for action in chunk.actionsInChunk:
+               for block in blockDictionary:
+                    if action.block in block.name:
+                         for a in block.attributes:
+                              if a == "Action":
+                                   ActionTotal += 1
+                              elif a == "Social":
+                                   SocialTotal += 1
+                              elif a == "Mastery":
+                                   MasteryTotal += 1
+                              elif a == "Achievement":
+                                   AchievementTotal += 1
+                              elif a == "Immersion":
+                                   ImmersionTotal += 1
+                              elif a == "Creativity":
+                                   CreativityTotal += 1
+                              elif a == "Farming":
+                                   FarmingTotal += 1
+
+     print("action total: " + str(ActionTotal))
+     print("social total: " + str(SocialTotal))
+     print("mastery total: " + str(MasteryTotal))
+     print("achievement total: " + str(AchievementTotal))
+     print("immersion total: " + str(ImmersionTotal))
+     print("creativity total: " + str(CreativityTotal))
+                              
+     #return finalMotivation
+
+def FinalClassification(finalArchetype, finalMotivation):
+     finalClassification = FinalClassification()
+     finalClassification.archetype = finalArchetype.archetype
+     finalClassification.motivation = finalMotivation.type
+     finalClassification.subMotivation = finalMotivation.subType
+     return finalClassification
+
 #write the metrics to a csv file we can use to create graphs              
 def WriteCSV(data, actionType, username):
      directory = ensure_dir(username + " metrics")
@@ -275,7 +375,7 @@ def WriteCSV(data, actionType, username):
      print("csv file successfully created")
 
 #process user input    
-def ProcessUserInput(username, chunks):
+def ProcessUserInput(username, chunks, blockDict):
      actionTypes = ["digs","places","punches","punched by", "crafts",
                "moves","takes","right-clicks","activates","uses",
                "wrote", "or type <identify> to get classification"]
@@ -288,20 +388,24 @@ def ProcessUserInput(username, chunks):
           for a in actionTypes:
                print(a + " average per chunk: " + str(int(round(ReturnChunkMetrics(chunks, a, username, True)))))
      elif(actionType == "identify"):
-          i = 12
+          i = 0
           chunksToIdentify = []
-          while(i <= 18):
+          while(i <= 48):
                if(chunks[i]):
                     chunksToIdentify.append(chunks[i])
                i += 1
           archetype = ArchetypeClassification(chunksToIdentify, username)
           print(str(archetype.classification))
+          ContextCheck(chunksToIdentify, blockDict)
      elif(actionType not in actionTypes):
           print("invalid action type, try again")
      else:
           print(actionType + " average per chunk: " +str(int(round(ReturnChunkMetrics(chunks, actionType, username, True)))))
-     ProcessUserInput(username, chunks)
-     
+     ProcessUserInput(username, chunks, blockDict)
+
+#load the block dictionary
+blockDict = loadBlockDictionary()
+
 #get and process the given username
 print('enter the username to identify (case sensitive)')
 username = input()
@@ -315,4 +419,4 @@ print(str(len(allSessions)))
 allChunks = SessionsIntoChunks(username, allSessions)
 print(str(len(allChunks)))
 
-ProcessUserInput(username, allChunks)
+ProcessUserInput(username, allChunks, blockDict)
