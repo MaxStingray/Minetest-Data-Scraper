@@ -318,7 +318,7 @@ def ArchetypeClassification(chunks, username):
 
      return finalArchetype
 
-def ContextCheck(chunks, blockDictionary):
+def ContextCheck(chunks, blockDictionary, archetype):
      finalMotivation = Motivation()
      #totals
      ActionTotal = 0
@@ -328,6 +328,8 @@ def ContextCheck(chunks, blockDictionary):
      ImmersionTotal = 0
      CreativityTotal = 0
      FarmingTotal = 0
+     BuildingTotal = 0
+     MiningTotal = 0
      #TODO all this
      for chunk in chunks:
           for action in chunk.actionsInChunk:
@@ -346,24 +348,86 @@ def ContextCheck(chunks, blockDictionary):
                                    ImmersionTotal += 1
                               elif a == "Creativity":
                                    CreativityTotal += 1
-                              elif a == "Farming":
+                              elif a == "Farmer":
                                    FarmingTotal += 1
+                              elif a == "Miner":
+                                   MiningTotal += 1
+                              elif a == "Builder":
+                                   BuildingTotal +=1
 
+     motivationTotals = [ActionTotal, SocialTotal, MasteryTotal, AchievementTotal, ImmersionTotal, CreativityTotal]
+     highestMotivation = max(motivationTotals)
+
+     if highestMotivation == ActionTotal:
+          finalMotivation.type = Motivations.ACTION
+     elif highestMotivation == SocialTotal:
+          finalMotivation.type = Motivations.SOCIAL
+     elif highestMotivation == MasteryTotal:
+          finalMotivation.type = Motivations.MASTERY
+     elif highestMotivation == AchievementTotal:
+          finalMotivation.type = Motivations.ACHIEVEMENT
+     elif highestMotivation == ImmersionTotal:
+          finalMotivation.type = Motivations.IMMERSION
+     elif highestMotivation == CreativityTotal:
+          finalMotivation.type = Motivations.CREATIVE
+     else:
+          finalMotivation.type = Motivations.UNKNOWN
+
+     motivationTotals.remove(highestMotivation)
+     highestMotivation = max(motivationTotals)
+     
+     if highestMotivation == ActionTotal:
+          finalMotivation.subType = Motivations.ACTION
+     elif highestMotivation == SocialTotal:
+          finalMotivation.subType = Motivations.SOCIAL
+     elif highestMotivation == MasteryTotal:
+          finalMotivation.subType = Motivations.MASTERY
+     elif highestMotivation == AchievementTotal:
+          finalMotivation.subType = Motivations.ACHIEVEMENT
+     elif highestMotivation == ImmersionTotal:
+          finalMotivation.subType = Motivations.IMMERSION
+     elif highestMotivation == CreativityTotal:
+          finalMotivation.subType = Motivations.CREATIVE
+     else:
+          finalMotivation.subType = Motivations.UNKNOWN
+     
      print("action total: " + str(ActionTotal))
      print("social total: " + str(SocialTotal))
      print("mastery total: " + str(MasteryTotal))
      print("achievement total: " + str(AchievementTotal))
      print("immersion total: " + str(ImmersionTotal))
      print("creativity total: " + str(CreativityTotal))
-                              
-     #return finalMotivation
 
-def FinalClassification(finalArchetype, finalMotivation):
+     #calculate archetype percentages
+     builderPercentage = percent(percent(BuildingTotal, 100), 60)
+     if archetype == Archetypes.BUILDER:
+          builderPercentage += 40
+     minerPercentage = percent(percent(MiningTotal, 100), 60)
+     if archetype == Archetypes.MINER:
+          minerPercentage += 40
+     farmerPercentage = percent(percent(FarmingTotal, 100), 60)
+     if archetype == Archetypes.FARMER:
+          farmerPercentage += 40
+
+     archetypePercentages = [builderPercentage, minerPercentage, farmerPercentage]
+     highestArchetype = max(archetypePercentages)
+
      finalClassification = FinalClassification()
-     finalClassification.archetype = finalArchetype.archetype
-     finalClassification.motivation = finalMotivation.type
-     finalClassification.subMotivation = finalMotivation.subType
-     return finalClassification
+     finalClassification.Motivation = finalMotivation.type
+     finalClassification.SubMotivation = finalMotivation.subType
+     
+     if highestArchetype == builderPercentage:
+          finalClassification.Archetype = Archetypes.BUILDER
+     elif highestArchetype == minerPercentage:
+          finalClassification.Archetype = Archetypes.MINER
+     elif highestArchetype == farmerPercentage:
+          finalClassification.Archetype = Archetypes.FARMER
+     else:
+          finalClassification.Archetype = Archetypes.UNKNOWN    
+     print(finalClassification.Motivation)
+     print(finalClassification.SubMotivation)
+     print(finalClassification.Archetype)
+     #return finalMotivation
 
 #write the metrics to a csv file we can use to create graphs              
 def WriteCSV(data, actionType, username):
@@ -396,7 +460,7 @@ def ProcessUserInput(username, chunks, blockDict):
                i += 1
           archetype = ArchetypeClassification(chunksToIdentify, username)
           print(str(archetype.classification))
-          ContextCheck(chunksToIdentify, blockDict)
+          ContextCheck(chunksToIdentify, blockDict, archetype.classification)
      elif(actionType not in actionTypes):
           print("invalid action type, try again")
      else:
