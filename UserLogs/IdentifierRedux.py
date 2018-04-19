@@ -90,6 +90,7 @@ def ensure_dir(filePath):
 class Chunk:
      def __init__(self):
           self.sessionID = 0
+          self.chunkID = 0
           self.actionsInChunk = []
 
 #returns a percentage of a number
@@ -249,6 +250,7 @@ def SessionsIntoChunks(username, parsedSessions):
                                    newChunk.actionsInChunk.append(action)
                                    allCheckedActions.append(action)
                     newChunk.sessionID = session.sessionID
+                    newChunk.chunkID = chunkIterator
                     parsedChunks.append(newChunk)
                     current = endOfChunk
                     chunkIterator += 1
@@ -292,9 +294,9 @@ def ArchetypeClassification(chunks, username):
      minerMin = 90
      #find the dig/place percentage increase
      increase = percentageIncrease(placeAverage, digAverage)
-     print(str(increase))
-     print("dig average = " + str(digAverage))
-     print("place average = " + str(placeAverage))
+     #print(str(increase))
+     #print("dig average = " + str(digAverage))
+     #print("place average = " + str(placeAverage))
      #check against the bounds
      if increase >= unknownMin and increase <= unknownMax:
           archetypeAssumption = Archetypes.UNKNOWN
@@ -315,7 +317,7 @@ def ArchetypeClassification(chunks, username):
      finalArchetype = Archetype()
      finalArchetype.chunks = chunks
      finalArchetype.classification = archetypeAssumption
-
+     #print(finalArchetype.classification)
      return finalArchetype
 
 def ContextCheck(chunks, blockDictionary, archetype):
@@ -331,29 +333,33 @@ def ContextCheck(chunks, blockDictionary, archetype):
      BuildingTotal = 0
      MiningTotal = 0
      #TODO all this
-     for chunk in chunks:
-          for action in chunk.actionsInChunk:
+     i = 0
+     while(i < len(chunks)):
+          #print("checking session: " + str(chunks[i].sessionID) + " chunk: "+ str(chunks[i].chunkID))
+          for action in chunks[i].actionsInChunk:
+               #print(str(action.time) + " " + action.verb + " " + action.block)
                for block in blockDictionary:
-                    if action.block in block.name:
+                    if block.name in action.block:
                          for a in block.attributes:
                               if a == "Action":
                                    ActionTotal += 1
-                              elif a == "Social":
+                              if a == "Social":
                                    SocialTotal += 1
-                              elif a == "Mastery":
+                              if a == "Mastery":
                                    MasteryTotal += 1
-                              elif a == "Achievement":
+                              if a == "Achievement":
                                    AchievementTotal += 1
-                              elif a == "Immersion":
+                              if a == "Immersion":
                                    ImmersionTotal += 1
-                              elif a == "Creativity":
+                              if a == "Creativity":
                                    CreativityTotal += 1
-                              elif a == "Farmer":
+                              if a == "Farmer":
                                    FarmingTotal += 1
-                              elif a == "Miner":
+                              if a == "Miner":
                                    MiningTotal += 1
-                              elif a == "Builder":
+                              if a == "Builder":
                                    BuildingTotal +=1
+          i += 1
 
      motivationTotals = [ActionTotal, SocialTotal, MasteryTotal, AchievementTotal, ImmersionTotal, CreativityTotal]
      highestMotivation = max(motivationTotals)
@@ -370,7 +376,7 @@ def ContextCheck(chunks, blockDictionary, archetype):
           finalMotivation.type = Motivations.IMMERSION
      elif highestMotivation == CreativityTotal:
           finalMotivation.type = Motivations.CREATIVE
-     else:
+     elif highestMotivation == 0:
           finalMotivation.type = Motivations.UNKNOWN
 
      motivationTotals.remove(highestMotivation)
@@ -388,7 +394,7 @@ def ContextCheck(chunks, blockDictionary, archetype):
           finalMotivation.subType = Motivations.IMMERSION
      elif highestMotivation == CreativityTotal:
           finalMotivation.subType = Motivations.CREATIVE
-     else:
+     elif highestMotivation == 0:
           finalMotivation.subType = Motivations.UNKNOWN
      
      print("action total: " + str(ActionTotal))
@@ -398,14 +404,17 @@ def ContextCheck(chunks, blockDictionary, archetype):
      print("immersion total: " + str(ImmersionTotal))
      print("creativity total: " + str(CreativityTotal))
 
+     a = [BuildingTotal, MiningTotal, FarmingTotal]
+     s = sum(a)
+     print(s)
      #calculate archetype percentages
-     builderPercentage = percent(percent(BuildingTotal, 100), 60)
+     builderPercentage = percent(percent(BuildingTotal, s),60)
      if archetype == Archetypes.BUILDER:
           builderPercentage += 40
-     minerPercentage = percent(percent(MiningTotal, 100), 60)
+     minerPercentage = percent(percent(MiningTotal, s),60)
      if archetype == Archetypes.MINER:
           minerPercentage += 40
-     farmerPercentage = percent(percent(FarmingTotal, 100), 60)
+     farmerPercentage = percent(percent(FarmingTotal, s),60)
      if archetype == Archetypes.FARMER:
           farmerPercentage += 40
 
@@ -452,20 +461,45 @@ def ProcessUserInput(username, chunks, blockDict):
           for a in actionTypes:
                print(a + " average per chunk: " + str(int(round(ReturnChunkMetrics(chunks, a, username, True)))))
      elif(actionType == "identify"):
-          i = 0
-          chunksToIdentify = []
-          while(i <= 48):
-               if(chunks[i]):
-                    chunksToIdentify.append(chunks[i])
-               i += 1
-          archetype = ArchetypeClassification(chunksToIdentify, username)
-          print(str(archetype.classification))
-          ContextCheck(chunksToIdentify, blockDict, archetype.classification)
+          archetype = ArchetypeMode(chunks, username)
+          ContextCheck(chunks, blockDict, archetype.classification)
      elif(actionType not in actionTypes):
           print("invalid action type, try again")
      else:
           print(actionType + " average per chunk: " +str(int(round(ReturnChunkMetrics(chunks, actionType, username, True)))))
      ProcessUserInput(username, chunks, blockDict)
+
+def ArchetypeMode(chunks, username):
+     modeArchetye = Archetype()
+     numChunks = len(chunks)
+     numBlocks = round(numChunks / 6)
+     if(numChunks <= 6):
+          modeArchetype = ArchetypeClassification(chunks, username)
+     else:
+          i = 0
+          j = 0
+          blockArchetypes = []
+          while(i <= numBlocks):
+               newBlock = []
+               endOfBlock = j + 5
+               while(j <= endOfBlock):
+                    try:
+                         newBlock.append(chunks[j])
+                         #print("appended block")
+                    except:
+                         pass
+                    j += 1
+               try:
+                    newArchetype = ArchetypeClassification(newBlock, username)
+               except:
+                    pass
+               blockArchetypes.append(newArchetype)
+               #print("*****************")
+               #print(len(blockArchetypes))
+               i += 1
+          modeArchetype = max(set(blockArchetypes), key=blockArchetypes.count)
+          return modeArchetype
+
 
 #load the block dictionary
 blockDict = loadBlockDictionary()
